@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Box, CssBaseline, ThemeProvider, createTheme, CircularProgress, Typography, Snackbar } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MovieCard } from './components/MovieCard';
-import { getTrendingMovies, getPersonalizedRecommendations } from './services/tmdb';
+import { getInitialMovies, getPersonalizedRecommendations } from './services/tmdb';
 import { Movie, MovieCache } from './types';
 import { ruLocale } from './locales/ru';
 
@@ -17,7 +17,7 @@ const darkTheme = createTheme({
 
 const queryClient = new QueryClient();
 
-const RECOMMENDATIONS_THRESHOLD = 20; // Количество лайков, после которого начинаем показывать рекомендации
+const RECOMMENDATIONS_THRESHOLD = 20;
 
 function App() {
   const [movies, setMovies] = useState<Movie[]>([]);
@@ -48,7 +48,7 @@ function App() {
           setShowRecommendationNotice(true);
         }
       } else {
-        newMovies = await getTrendingMovies();
+        newMovies = await getInitialMovies();
       }
       
       setMovies(newMovies);
@@ -68,7 +68,6 @@ function App() {
   useEffect(() => {
     localStorage.setItem('movieCache', JSON.stringify(movieCache));
     
-    // Проверяем, нужно ли загрузить рекомендации
     const likedMovieIds = getLikedMovieIds();
     if (likedMovieIds.length === RECOMMENDATIONS_THRESHOLD) {
       loadMovies();

@@ -20,6 +20,65 @@ export const getTrendingMovies = async (page = 1): Promise<Movie[]> => {
   return response.data.results;
 };
 
+export const getInitialMovies = async (): Promise<Movie[]> => {
+  try {
+    // Загружаем несколько страниц параллельно для скорости
+    const pages = Array.from({ length: 10 }, (_, i) => i + 1);
+    const responses = await Promise.all([
+      // Получаем трендовые фильмы
+      ...pages.slice(0, 4).map(page => 
+        api.get(`/trending/movie/week`, { params: { page } })
+      ),
+      // Получаем популярные фильмы
+      ...pages.slice(0, 3).map(page => 
+        api.get(`/movie/popular`, { params: { page } })
+      ),
+      // Получаем фильмы с высоким рейтингом
+      ...pages.slice(0, 3).map(page => 
+        api.get(`/movie/top_rated`, { params: { page } })
+      )
+    ]);
+
+    // Объединяем все результаты
+    const allMovies = responses.flatMap(response => response.data.results);
+
+    // Удаляем дубликаты
+    const uniqueMovies = allMovies.reduce((acc, movie) => {
+      if (!acc.some(m => m.id === movie.id)) {
+        acc.push(movie);
+      }
+      return acc;
+    }, [] as Movie[]);
+
+    // Перемешиваем фильмы для разнообразия
+    const shuffledMovies = uniqueMovies
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 200);
+
+    // Проверяем наличие трейлеров
+    const moviesWithTrailerInfo = await Promise.all(
+      shuffledMovies.map(async (movie) => ({
+        movie,
+        hasTrailer: await checkMovieHasTrailer(movie.id),
+      }))
+    );
+
+    // Сортируем: сначала фильмы с трейлерами
+    return moviesWithTrailerInfo
+      .sort((a, b) => {
+        if (a.hasTrailer === b.hasTrailer) {
+          return b.movie.vote_average - a.movie.vote_average;
+        }
+        return a.hasTrailer ? -1 : 1;
+      })
+      .map(item => item.movie);
+
+  } catch (error) {
+    console.error('Error loading initial movies:', error);
+    return [];
+  }
+};
+
 export const getMovieDetails = async (movieId: number): Promise<MovieDetails> => {
   const response = await api.get(`/movie/${movieId}`, {
     params: {
