@@ -14,10 +14,15 @@ const api = axios.create({
 });
 
 export const getTrendingMovies = async (page = 1): Promise<Movie[]> => {
-  const response = await api.get(`/trending/movie/week`, {
-    params: { page },
-  });
-  return response.data.results;
+  try {
+    const response = await api.get(`/trending/movie/week`, {
+      params: { page },
+    });
+    return response.data.results;
+  } catch (error) {
+    console.error('Error fetching trending movies:', error);
+    return [];
+  }
 };
 
 export const getInitialMovies = async (): Promise<Movie[]> => {
@@ -43,8 +48,8 @@ export const getInitialMovies = async (): Promise<Movie[]> => {
     const allMovies = responses.flatMap(response => response.data.results);
 
     // Удаляем дубликаты
-    const uniqueMovies = allMovies.reduce((acc, movie) => {
-      if (!acc.some(m => m.id === movie.id)) {
+    const uniqueMovies = allMovies.reduce((acc: Movie[], movie: Movie) => {
+      if (!acc.some((m: Movie) => m.id === movie.id)) {
         acc.push(movie);
       }
       return acc;
@@ -53,11 +58,11 @@ export const getInitialMovies = async (): Promise<Movie[]> => {
     // Перемешиваем фильмы для разнообразия
     const shuffledMovies = uniqueMovies
       .sort(() => Math.random() - 0.5)
-      .slice(0, 200);
+      .slice(0, 300);
 
     // Проверяем наличие трейлеров
     const moviesWithTrailerInfo = await Promise.all(
-      shuffledMovies.map(async (movie) => ({
+      shuffledMovies.map(async (movie: Movie) => ({
         movie,
         hasTrailer: await checkMovieHasTrailer(movie.id),
       }))
@@ -80,43 +85,69 @@ export const getInitialMovies = async (): Promise<Movie[]> => {
 };
 
 export const getMovieDetails = async (movieId: number): Promise<MovieDetails> => {
-  const response = await api.get(`/movie/${movieId}`, {
-    params: {
-      append_to_response: 'videos',
-    },
-  });
-  return response.data;
+  try {
+    const response = await api.get(`/movie/${movieId}`, {
+      params: {
+        append_to_response: 'videos',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching movie details:', error);
+    return {} as MovieDetails;
+  }
 };
 
 export const searchMovies = async (query: string, page = 1): Promise<Movie[]> => {
-  const response = await api.get(`/search/movie`, {
-    params: {
-      query,
-      page,
-    },
-  });
-  return response.data.results;
+  try {
+    const response = await api.get(`/search/movie`, {
+      params: {
+        query,
+        page,
+      },
+    });
+    return response.data.results;
+  } catch (error) {
+    console.error('Error searching movies:', error);
+    return [];
+  }
 };
 
 export const getMoviesByGenre = async (genreId: number, page = 1): Promise<Movie[]> => {
-  const response = await api.get(`/discover/movie`, {
-    params: {
-      with_genres: genreId,
-      page,
-      sort_by: 'popularity.desc',
-    },
-  });
-  return response.data.results;
+  try {
+    const response = await axios.get(`${BASE_URL}/genre/${genreId}/movies`, {
+      params: { 
+        api_key: TMDB_API_KEY,
+        language: 'ru-RU',
+        region: 'RU',
+        page 
+      },
+    });
+    return response.data.results;
+  } catch (error) {
+    console.error(`Error fetching movies by genre ${genreId}:`, error);
+    return [];
+  }
 };
 
 export const getSimilarMovies = async (movieId: number): Promise<Movie[]> => {
-  const response = await api.get(`/movie/${movieId}/similar`);
-  return response.data.results;
+  try {
+    const response = await api.get(`/movie/${movieId}/similar`);
+    return response.data.results;
+  } catch (error) {
+    console.error(`Error fetching similar movies for ${movieId}:`, error);
+    return [];
+  }
 };
 
 export const getRecommendedMovies = async (movieId: number): Promise<Movie[]> => {
-  const response = await api.get(`/movie/${movieId}/recommendations`);
-  return response.data.results;
+  try {
+    const response = await api.get(`/movie/${movieId}/recommendations`);
+    return response.data.results;
+  } catch (error) {
+    console.error(`Error fetching recommended movies for ${movieId}:`, error);
+    return [];
+  }
 };
 
 // Проверяем наличие трейлера у фильма
@@ -154,8 +185,8 @@ export const getPersonalizedRecommendations = async (likedMovieIds: number[]): P
   ];
 
   // Удаляем дубликаты и уже лайкнутые фильмы
-  const uniqueMovies = allMovies.reduce((acc, movie) => {
-    if (!acc.some(m => m.id === movie.id) && !likedMovieIds.includes(movie.id)) {
+  const uniqueMovies = allMovies.reduce((acc: Movie[], movie: Movie) => {
+    if (!acc.some((m: Movie) => m.id === movie.id) && !likedMovieIds.includes(movie.id)) {
       acc.push(movie);
     }
     return acc;
@@ -164,7 +195,7 @@ export const getPersonalizedRecommendations = async (likedMovieIds: number[]): P
   // Сортируем по рейтингу и берем топ-200
   const topRatedMovies = uniqueMovies
     .sort((a, b) => b.vote_average - a.vote_average)
-    .slice(0, 200);
+    .slice(0, 10000);
 
   // Проверяем наличие трейлеров (параллельно для ускорения)
   const moviesWithTrailerInfo = await Promise.all(
@@ -183,5 +214,5 @@ export const getPersonalizedRecommendations = async (likedMovieIds: number[]): P
       return a.hasTrailer ? -1 : 1;
     })
     .map(item => item.movie)
-    .slice(0, 200);
+    .slice(0, 10000);
 };

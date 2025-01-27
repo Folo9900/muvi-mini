@@ -41,6 +41,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
         setDetails(movieDetails);
       } catch (error) {
         console.error('Error fetching movie details:', error);
+        setDetails(null);
       }
     };
     fetchDetails();

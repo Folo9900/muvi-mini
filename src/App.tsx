@@ -40,7 +40,7 @@ function App() {
     try {
       setLoading(true);
       const likedMovieIds = getLikedMovieIds();
-      
+
       let newMovies: Movie[];
       if (likedMovieIds.length >= RECOMMENDATIONS_THRESHOLD) {
         newMovies = await getPersonalizedRecommendations(likedMovieIds);
@@ -50,12 +50,11 @@ function App() {
       } else {
         newMovies = await getInitialMovies();
       }
-      
       setMovies(newMovies);
       setError(null);
     } catch (error) {
       console.error('Error loading movies:', error);
-      setError(ruLocale.errors.loadingFailed);
+      setError('Не удалось загрузить фильмы.');
     } finally {
       setLoading(false);
     }
